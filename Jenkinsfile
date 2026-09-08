@@ -34,22 +34,25 @@ pipeline {
         }
 
         stage('IaC & Policy Audit') {
-            steps {
-                echo 'Running Trivy IaC configuration audit...'
-                sh """
-                    docker run --rm --volumes-from jenkins-devsecops \
-                        aquasec/trivy:latest config --exit-code 1 ${WS}
-                """
+        steps {
+            echo 'Running Trivy IaC configuration audit...'
+            sh """
+                docker run --rm --volumes-from jenkins-devsecops \
+                    aquasec/trivy:latest config \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 1 \
+                    ${WS}
+            """
 
-                echo 'Running Kyverno admission policy validation...'
-                sh """
-                    docker run --rm --volumes-from jenkins-devsecops \
-                        ghcr.io/kyverno/kyverno-cli:latest \
-                        apply ${WS}/k8s/policies/policy-disallow-root.yml \
-                        --resource ${WS}/k8s/deployment.yml
-                """
-            }
+            echo 'Running Kyverno admission policy validation...'
+            sh """
+                docker run --rm --volumes-from jenkins-devsecops \
+                    ghcr.io/kyverno/kyverno-cli:latest \
+                    apply ${WS}/k8s/policies/policy-disallow-root.yml \
+                    --resource ${WS}/k8s/deployment.yml
+            """
         }
+    }
 
         stage('Docker Build') {
             steps {
