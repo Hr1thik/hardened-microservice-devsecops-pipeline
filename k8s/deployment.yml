@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: devsecops-app
+  namespace: devsecops-prod # FIX (KSV-0110): Set explicit non-default namespace
   labels:
     app: devsecops-app
 spec:
@@ -16,11 +17,14 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        runAsUser: 10001 # FIX (KSV-0020): Set UID > 10000
+        runAsGroup: 10001 # FIX (KSV-0021): Set GID > 10000
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault # FIX (KSV-0030 & KSV-0104): Set seccomp profile
       containers:
         - name: web
-          image: my-registry/devsecops-app:v1.0.0
+          image: docker.io/library/devsecops-app:v1.0.0 # FIX (KSV-0125): Explicit registry domain
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
