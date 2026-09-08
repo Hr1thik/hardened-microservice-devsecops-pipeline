@@ -66,24 +66,24 @@ pipeline {
 
         stage('DAST Dynamic Analysis') {
             steps {
-                echo 'Executing OWASP ZAP baseline dynamic scan...'
+                echo 'Executing OWASP ZAP baseline dynamic scan and generating report...'
                 sh """
+                    # 1. Create isolated network
                     docker network create zap-net || true
 
+                    # 2. Start target app container
                     docker run -d --name dso-target-app --network zap-net ${APP_IMAGE}
                     sleep 4
 
-                    # Run ZAP mounting Jenkins workspace into /zap/wrk
+                    # 3. Symlink /zap/wrk to Jenkins workspace and generate zap_report.html
                     docker run --rm --network zap-net \
                         --volumes-from jenkins-devsecops \
-                        -v "${WS}":/zap/wrk/:rw \
                         -u root \
-                        zaproxy/zap-stable:latest zap-baseline.py \
-                        -t http://dso-target-app:3000 \
-                        -m 1 \
-                        -r zap_report.html \
-                        -I || true
+                        --entrypoint sh \
+                        zaproxy/zap-stable:latest \
+                        -c "rm -rf /zap/wrk && ln -s ${WS} /zap/wrk && zap-baseline.py -t http://dso-target-app:3000 -m 1 -r zap_report.html -I || true"
 
+                    # 4. Clean up test container and network
                     docker rm -f dso-target-app || true
                     docker network rm zap-net || true
                 """
