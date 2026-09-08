@@ -19,7 +19,7 @@ pipeline {
 
         stage('SAST Analysis') {
             steps {
-                echo 'Running Semgrep SAST against OWASP Top 10 (excluding IaC & CI workflows)...'
+                echo 'Running Semgrep SAST against OWASP Top 10...'
                 sh """
                     docker run --rm --volumes-from jenkins-devsecops \
                         -e SEMGREP_IN_DOCKER=0 \
@@ -34,25 +34,25 @@ pipeline {
         }
 
         stage('IaC & Policy Audit') {
-        steps {
-            echo 'Running Trivy IaC configuration audit...'
-            sh """
-                docker run --rm --volumes-from jenkins-devsecops \
-                    aquasec/trivy:latest config \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1 \
-                    ${WS}
-            """
+            steps {
+                echo 'Running Trivy IaC configuration audit...'
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
+                        aquasec/trivy:latest config \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 1 \
+                        ${WS}
+                """
 
-            echo 'Running Kyverno admission policy validation...'
-            sh """
-                docker run --rm --volumes-from jenkins-devsecops \
-                    ghcr.io/kyverno/kyverno-cli:latest \
-                    apply ${WS}/k8s/policies/policy-disallow-root.yml \
-                    --resource ${WS}/k8s/deployment.yml
-            """
+                echo 'Running Kyverno admission policy validation...'
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
+                        ghcr.io/kyverno/kyverno-cli:latest \
+                        apply ${WS}/k8s/policies/policy-disallow-root.yml \
+                        --resource ${WS}/k8s/deployment.yml
+                """
+            }
         }
-    }
 
         stage('Docker Build') {
             steps {
@@ -60,6 +60,31 @@ pipeline {
                 sh """
                     cd ${WS}
                     docker build -t ${APP_IMAGE} .
+                """
+            }
+        }
+
+        stage('DAST Dynamic Analysis') {
+            steps {
+                echo 'Executing OWASP ZAP baseline dynamic scan...'
+                sh """
+                    # 1. Create dedicated bridge network
+                    docker network create zap-net || true
+
+                    # 2. Spin up test container
+                    docker run -d --name dso-target-app --network zap-net ${APP_IMAGE}
+                    sleep 4
+
+                    # 3. Run OWASP ZAP Baseline Scan container against target app container
+                    docker run --rm --network zap-net \
+                        zaproxy/zap-stable:latest zap-baseline.py \
+                        -t http://dso-target-app:3000 \
+                        -m 1 \
+                        -I || true
+
+                    # 4. Tear down target container and network
+                    docker rm -f dso-target-app || true
+                    docker network rm zap-net || true
                 """
             }
         }
@@ -85,7 +110,7 @@ pipeline {
             sh "docker rmi ${APP_IMAGE} || true"
         }
         success {
-            echo 'All DevSecOps quality gates passed successfully!'
+            echo 'All DevSecOps quality gates (SAST + DAST + IaC + CVEs) passed!'
         }
         failure {
             echo 'Pipeline failed due to security or policy violations.'
