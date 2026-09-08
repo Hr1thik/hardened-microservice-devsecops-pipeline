@@ -68,24 +68,22 @@ pipeline {
             steps {
                 echo 'Executing OWASP ZAP baseline dynamic scan...'
                 sh """
-                    # 1. Create dedicated bridge network
                     docker network create zap-net || true
 
-                    # 2. Spin up test container
                     docker run -d --name dso-target-app --network zap-net ${APP_IMAGE}
                     sleep 4
 
-                    # 3. Run OWASP ZAP and write zap_report.html directly into workspace
+                    # Run ZAP mounting Jenkins workspace into /zap/wrk
                     docker run --rm --network zap-net \
                         --volumes-from jenkins-devsecops \
-                        -w ${WS} \
+                        -v "${WS}":/zap/wrk/:rw \
+                        -u root \
                         zaproxy/zap-stable:latest zap-baseline.py \
                         -t http://dso-target-app:3000 \
                         -m 1 \
                         -r zap_report.html \
                         -I || true
 
-                    # 4. Tear down target container and network
                     docker rm -f dso-target-app || true
                     docker network rm zap-net || true
                 """
