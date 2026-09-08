@@ -18,15 +18,20 @@ pipeline {
         }
 
         stage('SAST Analysis') {
-        steps {
-            echo 'Running Semgrep SAST against OWASP Top 10...'
-            sh """
-                docker run --rm --volumes-from jenkins-devsecops \
-                    -e SEMGREP_IN_DOCKER=0 \
-                    semgrep/semgrep semgrep scan --config auto --error ${WS}
-            """
+            steps {
+                echo 'Running Semgrep SAST against OWASP Top 10 (excluding IaC & CI workflows)...'
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
+                        -e SEMGREP_IN_DOCKER=0 \
+                        semgrep/semgrep semgrep scan \
+                        --config "p/owasp-top-ten" \
+                        --config "p/javascript" \
+                        --exclude ".github" \
+                        --exclude "k8s" \
+                        --error ${WS}
+                """
+            }
         }
-    }
 
         stage('IaC & Policy Audit') {
             steps {
@@ -49,7 +54,10 @@ pipeline {
         stage('Docker Build') {
             steps {
                 echo "Building production image: ${APP_IMAGE}..."
-                sh "docker build -t ${APP_IMAGE} ."
+                sh """
+                    cd ${WS}
+                    docker build -t ${APP_IMAGE} .
+                """
             }
         }
 
