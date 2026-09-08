@@ -7,21 +7,16 @@ on:
     branches: [ "main" ]
 
 jobs:
-    sast-and-secrets:
+  sast-and-secrets:
     name: SAST & Secrets Scanning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: TruffleHog Secret Scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          base: ""
-          head: ""
-          extra_args: --only-verified
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/pwd" trufflesecurity/trufflehog:latest filesystem /pwd --fail --only-verified
 
       - name: Run Semgrep SAST
         uses: returntocorp/semgrep-action@v1
