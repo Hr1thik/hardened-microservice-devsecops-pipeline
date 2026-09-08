@@ -3,44 +3,45 @@ pipeline {
 
     environment {
         APP_IMAGE = "devsecops-app:${BUILD_NUMBER}"
+        WS = "${WORKSPACE}"
     }
 
     stages {
         stage('Secrets Scanning') {
             steps {
                 echo 'Running TruffleHog secrets scan...'
-                sh '''
-                    docker run --rm -v "${WORKSPACE}":/pwd \
-                        trufflesecurity/trufflehog:latest filesystem /pwd --fail
-                '''
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
+                        trufflesecurity/trufflehog:latest filesystem ${WS} --fail
+                """
             }
         }
 
         stage('SAST Analysis') {
             steps {
                 echo 'Running Semgrep SAST against OWASP Top 10...'
-                sh '''
-                    docker run --rm -v "${WORKSPACE}":/src \
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops -w ${WS} \
                         semgrep/semgrep semgrep scan --config auto --error
-                '''
+                """
             }
         }
 
         stage('IaC & Policy Audit') {
             steps {
                 echo 'Running Trivy IaC configuration audit...'
-                sh '''
-                    docker run --rm -v "${WORKSPACE}":/src \
-                        aquasec/trivy:latest config --exit-code 1 /src
-                '''
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
+                        aquasec/trivy:latest config --exit-code 1 ${WS}
+                """
 
                 echo 'Running Kyverno admission policy validation...'
-                sh '''
-                    docker run --rm -v "${WORKSPACE}":/workspace \
+                sh """
+                    docker run --rm --volumes-from jenkins-devsecops \
                         ghcr.io/kyverno/kyverno-cli:latest \
-                        apply /workspace/k8s/policies/policy-disallow-root.yml \
-                        --resource /workspace/k8s/deployment.yml
-                '''
+                        apply ${WS}/k8s/policies/policy-disallow-root.yml \
+                        --resource ${WS}/k8s/deployment.yml
+                """
             }
         }
 
