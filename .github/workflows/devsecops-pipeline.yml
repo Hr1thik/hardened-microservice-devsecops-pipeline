@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  sast-and-secrets:
+    sast-and-secrets:
     name: SAST & Secrets Scanning
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +19,8 @@ jobs:
       - name: TruffleHog Secret Scan
         uses: trufflesecurity/trufflehog@main
         with:
-          path: ./
+          base: ""
+          head: ""
           extra_args: --only-verified
 
       - name: Run Semgrep SAST
