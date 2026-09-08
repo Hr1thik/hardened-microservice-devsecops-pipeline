@@ -1,0 +1,30 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-root-and-require-tags
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-runAsNonRoot
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+      validate:
+        message: "Running containers as root is forbidden. Set securityContext.runAsNonRoot to true."
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+
+    - name: disallow-latest-tag
+      match:
+        any:
+        - resources:
+            kinds: [Pod]
+      validate:
+        message: "Using the ':latest' image tag is strictly prohibited. Use explicit semver tags."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

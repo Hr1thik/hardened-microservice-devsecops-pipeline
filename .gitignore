@@ -1,0 +1,22 @@
+gitignore
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment & Local Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Build outputs & IDE
+dist/
+build/
+.vscode/
+.idea/
+.DS_Store
+
+# Scanner / Test reports
+trivy-report.json
+zap-report.html
+coverage/

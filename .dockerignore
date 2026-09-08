@@ -1,0 +1,11 @@
+dockerignore
+node_modules
+npm-debug.log
+.git
+.gitignore
+.github
+Dockerfile
+README.md
+k8s
+secrets
+trivy-report.json
