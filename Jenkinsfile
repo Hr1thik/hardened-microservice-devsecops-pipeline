@@ -75,11 +75,14 @@ pipeline {
                     docker run -d --name dso-target-app --network zap-net ${APP_IMAGE}
                     sleep 4
 
-                    # 3. Run OWASP ZAP Baseline Scan container against target app container
+                    # 3. Run OWASP ZAP and write zap_report.html directly into workspace
                     docker run --rm --network zap-net \
+                        --volumes-from jenkins-devsecops \
+                        -w ${WS} \
                         zaproxy/zap-stable:latest zap-baseline.py \
                         -t http://dso-target-app:3000 \
                         -m 1 \
+                        -r zap_report.html \
                         -I || true
 
                     # 4. Tear down target container and network
