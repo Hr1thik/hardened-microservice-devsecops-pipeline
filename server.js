@@ -1,7 +1,12 @@
-javascript
 const express = require('express');
+const helmet = require('helmet');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Security hardening middleware
+app.use(helmet());
+app.disable('x-powered-by');
 
 // Middleware
 app.use(express.json());
