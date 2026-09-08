@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy IaC / Config Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
           scan-ref: '.'
@@ -43,7 +43,7 @@ jobs:
         run: docker build -t devsecops-app:${{ github.sha }} .
 
       - name: Run Trivy Container Vulnerability Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'devsecops-app:${{ github.sha }}'
           format: 'table'
