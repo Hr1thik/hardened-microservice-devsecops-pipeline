@@ -5,7 +5,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci --omit=dev
+# Hardened npm install preventing malicious lifecycle scripts
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY server.js .
 
